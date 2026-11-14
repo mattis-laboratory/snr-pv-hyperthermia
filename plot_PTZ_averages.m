@@ -1,0 +1,87 @@
+%
+%
+% This script is intentionally bad
+%% Het PTZ plots
+clc; clear ; close all
+load('/nfs/turbo/umms-mattislab/Chandni/Data/SNr_PV_PTZ/het_data.mat', ...
+    'het_marks','het_zdff_BL');
+
+% remove injection times before last one
+het_marks{2,:}(1) = [];
+het_marks{3,:}(1) = [];
+n_PTZ_subs = length(het_zdff_BL);
+
+
+%% Plot
+for subject = 1:n_PTZ_subs
+
+    thisZdff  = het_zdff_BL{subject,:};
+    % BL        = het_marks{subject,:}(1);
+    UEO        = het_marks{subject,:}(3);
+    % all_traces(subject,:)  = thisZdff(BL:BL + 60*3*1000);
+    all_traces(subject,:)  = thisZdff(UEO-30*1000:UEO+30*1000);
+
+    clear BL UEO this*
+end
+
+PTZ_mean = nanmean(all_traces,1);
+PTZ_sem  = nanstd(all_traces)./sqrt(n_PTZ_subs);
+
+% PTZ_mean = nanmean(fliplr(all_traces),1);
+% PTZ_sem  = nanstd(fliplr(all_traces))./sqrt(n_PTZ_subs);
+% PTZ_mean = fliplr(PTZ_mean);
+% PTZ_sem = fliplr(PTZ_sem);
+
+t = getTime(PTZ_mean,1000);
+
+ds_step = 100;
+t = t(1: ds_step:end);
+PTZ_mean = PTZ_mean(1: ds_step:end);
+PTZ_sem = PTZ_sem(1: ds_step:end);
+
+
+h = shadedErrorBar(t, PTZ_mean, PTZ_sem, ...
+    'lineprops', {'color', [0 1 0]}, 'transparent', false);
+hold on;
+
+
+
+%% Hyperthermia het_sz + WT
+clearvars -except t ds_step
+params = nostim_analysis_params();
+load(params.preprocFile, 'info', 'rgb_m', 'zdff','color','events','fsEEG')
+n_mice                  = numel(unique(info.mouse));
+
+for subject = 1:length(zdff.signal)
+
+    thisZdff  = zdff.signal{subject,:};
+    %BL        = events.eeg.BL{subject,:};
+    UEO        = events.eeg.UEO{subject,:};
+
+    %all_traces(subject,:)  = thisZdff(BL:BL + 60*3*fsEEG);
+    all_traces(subject,:)  = thisZdff(UEO-30*1000:UEO+30*1000);
+    clear BL UEO this*
+end
+
+HT_het_mean = nanmean(all_traces,1);
+HT_het_sem  = nanstd(all_traces)./sqrt(n_mice);
+
+% HT_het_mean = nanmean(fliplr(all_traces),1);
+% HT_het_sem  = nanstd(fliplr(all_traces))./sqrt(n_mice);
+% HT_het_mean = fliplr(HT_het_mean);
+% HT_het_sem  = fliplr(HT_het_sem);
+
+HT_het_mean = HT_het_mean(1: ds_step:end);
+HT_het_sem  = HT_het_sem(1: ds_step:end);
+
+
+shadedErrorBar(t, HT_het_mean, HT_het_sem, ...
+    'lineprops', {'color', color}, 'transparent', false);
+
+clear HT*
+
+
+
+
+
+

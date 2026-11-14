@@ -1,0 +1,113 @@
+%% Transients PSTH
+clc; clear; close all;
+
+params = nostim_analysis_params();
+load(params.preprocFile, 'info', 'rgb_m', 'rgb_s','color','events','fsEEG')
+load(params.detTransientsFname,'transients')
+
+%% Prepare PSTH data
+
+% Parameters
+binSize = 10;                    % seconds per bin
+window  = [-60, 60];             % time window relative to seizure onset
+
+% Define bin edges
+edges      = window(1):binSize:window(2);
+binCenters = edges(1:end-1) + binSize/2;
+
+%% Align and isolate peaks around UEO
+
+n_mice      = numel(unique(info.mouse));
+n_sess      = numel(info.fullID);
+UEOs        = events.zdff.UEO(:,1);
+
+for n = 1:n_sess
+
+    % Extract pks
+    locs  = transients{n,2}/fsEEG;
+
+    % align to seizure onset
+    aligned_pks = locs - UEOs{n}/fsEEG;
+
+    % keep only those within desired window
+    aligned_pks = aligned_pks(aligned_pks >= window(1) & aligned_pks <= window(2));
+
+    % alignedPeaks = [alignedPeaks, aligned];
+    UEO_pks{n,:}    = aligned_pks;
+    pk_counts(n,:)  = histcounts(aligned_pks,edges);
+    clear aligned_pks
+
+end
+
+mean_UEO_pks = mean(pk_counts,1);
+sem_UEO_pks  = std(pk_counts,1)./sqrt(n_mice);
+
+%% Plot psth
+figure('Color','w'); hold on;
+
+%%
+bar(binCenters, mean_UEO_pks, ...
+    'FaceColor',rgb_m, ...
+    'EdgeColor','none',...
+    'FaceAlpha',1);
+
+errorbar(binCenters, mean_UEO_pks, sem_UEO_pks, ...
+    'Color',[0 0 0], 'LineStyle','none', 'LineWidth',1.5);
+
+%% Aesthetics
+% xlabel('Time from UEO (s)');
+% ylabel('Mean Detected Transients');
+%title('UEO');
+%xline(0, '--k','LineWidth',2);
+
+ax1 = gca;                       % Get current axis handle
+ax1.XAxis.FontSize = 14;         % Set font size for the x-axis ticks
+ax1.XAxis.FontWeight = 'bold';   % Set font weight to bold for the x-axis ticks
+ax1.YAxis.FontSize = 14;         % Set font size for the y-axis ticks
+ax1.YAxis.FontWeight = 'bold';   % Set font weight to bold for the y-axis ticks
+ax1.YLim = [0 7];
+
+%% Save bins 6 and 7 for LME stats
+
+lme_data = [info.mouse pk_counts(:,[6,7])];
+writematrix(lme_data,'PSTH_lme.xlsx','Sheet',params.group)
+
+%% Next group
+
+clear mean* sem* n* pk* UEO* locs*
+
+%% ?
+figure;
+hold on
+barWidth = diff(edges(1:2))*0.8;
+%
+% barWidth = 3;
+adjCenters = binCenters;
+
+for i = 1:numel(adjCenters)
+
+    if mean_WT(i) >= mean_UEO_pks(i)
+        bar(adjCenters(i), mean_WT(i), barWidth, ...
+            'FaceColor','b', 'EdgeColor','none');
+        errorbar(adjCenters, mean_WT, sem_WT, ...
+            'Color',[0 0 0], 'LineStyle','none', 'LineWidth',1.5);
+
+        bar(adjCenters(i), mean_UEO_pks(i), barWidth, ...
+            'FaceColor','r', 'EdgeColor','none');
+        errorbar(adjCenters, mean_UEO_pks, sem_het, ...
+            'Color',[0.8 0.8 0.8], 'LineStyle','none', 'LineWidth',1.5);
+    else
+        bar(adjCenters(i), mean_UEO_pks(i), barWidth, ...
+            'FaceColor','r', 'EdgeColor','none');
+        errorbar(adjCenters, mean_UEO_pks, sem_het, ...
+            'Color',[0.8 0.8 0.8], 'LineStyle','none', 'LineWidth',1.5);
+
+        bar(adjCenters(i), mean_WT(i), barWidth, ...
+            'FaceColor','b', 'EdgeColor','none');
+        errorbar(adjCenters, mean_WT, sem_WT, ...
+            'Color',[0 0 0], 'LineStyle','none', 'LineWidth',1.5);
+    end
+end
+
+
+
