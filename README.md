@@ -1,4 +1,4 @@
-# Photometry/ EEG Analysis on SNr Data
+# Photometry/ EEG Analysis of SNr PV Hyperthermia Data
 
 ## Overview
 - MATLAB and R scripts for analysis of data associated with "Inhibition of nigral GABAergic neurons during hyperthermia-evoked seizures in Scn1a haploinsufficient mice" publication. 
